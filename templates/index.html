@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subnational Map Viewer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.13/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    #tableDrawer {
+      position: absolute;
+      bottom: 0;
+      left: 64px;
+      right: 0;
+      height: 50%;
+      background-color: white;
+      transform: translateY(70%);
+      transition: transform 0.3s ease-in-out;
+      z-index: 10;
+    }
+    #tableDrawer.open {
+      transform: translateY(0);
+    }
+    .draggable {
+      height: 50%;
+      overflow: hidden;
+    }
+    #dragHandle {
+      height: 20px;
+      background-color: #f2f2f2;
+    }
+    table {
+      width: 60%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+    }
+    th {
+      background-color: #f2f2f2;
+      text-align: left;
+    }
+  </style>
+</head>
+<body class="bg-gray-100">
+
+  <!-- Top Bar -->
+  <header class="bg-white shadow-md border-b border-gray-200">
+    <div class="flex justify-between items-center p-4">
+      <a href="/"><h1 class="text-xl font-bold">Multidepravation data viewer</h1></a>
+      <div class="flex-1 flex justify-center">
+        <input type="text" placeholder="Search" class="p-2 border rounded items-center w-1/2">
+      </div>
+      <div class="flex items-center space-x-4 p-2">
+        <div class="flex items-center space-x-4">
+        <!-- <?xml version="1.0" encoding="UTF-8"?><svg width="27px" height="27px" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="#000000"><path d="M3 19V5C3 3.89543 3.89543 3 5 3H16.1716C16.702 3 17.2107 3.21071 17.5858 3.58579L20.4142 6.41421C20.7893 6.78929 21 7.29799 21 7.82843V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19Z" stroke="#000000" stroke-width="1.5"></path><path d="M8.6 9H15.4C15.7314 9 16 8.73137 16 8.4V3.6C16 3.26863 15.7314 3 15.4 3H8.6C8.26863 3 8 3.26863 8 3.6V8.4C8 8.73137 8.26863 9 8.6 9Z" stroke="#000000" stroke-width="1.5"></path><path d="M6 13.6V21H18V13.6C18 13.2686 17.7314 13 17.4 13H6.6C6.26863 13 6 13.2686 6 13.6Z" stroke="#000000" stroke-width="1.5"></path></svg> -->
+        <button id="printButton"><?xml version="1.0" encoding="UTF-8"?><svg width="27px" height="27px" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="#000000"><path d="M17 13.01L17.01 12.9989" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path><path d="M7 17H17M6 10V3.6C6 3.26863 6.26863 3 6.6 3H17.4C17.7314 3 18 3.26863 18 3.6V10M21 20.4V14C21 11.7909 19.2091 10 17 10H7C4.79086 10 3 11.7909 3 14V20.4C3 20.7314 3.26863 21 3.6 21H20.4C20.7314 21 21 20.7314 21 20.4Z" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>
+        <!-- <?xml version="1.0" encoding="UTF-8"?><svg width="27px" height="27px" stroke-width="1.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" color="#000000"><path d="M18 22C19.6569 22 21 20.6569 21 19C21 17.3431 19.6569 16 18 16C16.3431 16 15 17.3431 15 19C15 20.6569 16.3431 22 18 22Z" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path><path d="M18 8C19.6569 8 21 6.65685 21 5C21 3.34315 19.6569 2 18 2C16.3431 2 15 3.34315 15 5C15 6.65685 16.3431 8 18 8Z" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path><path d="M6 15C7.65685 15 9 13.6569 9 12C9 10.3431 7.65685 9 6 9C4.34315 9 3 10.3431 3 12C3 13.6569 4.34315 15 6 15Z" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path><path d="M15.5 6.5L8.5 10.5" stroke="#000000" stroke-width="1.5"></path><path d="M8.5 13.5L15.5 17.5" stroke="#000000" stroke-width="1.5"></path></svg> -->
+
+        <p class="text-gray-500 right-8">Session ID: 1234567890</p>
+        </div>
+        <button class="bg-gray-400 text-white w-10 h-10 rounded-full flex items-center justify-center">PK</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <div class="flex">
+    <!-- Sidebar -->
+    <aside class="w-1/4 bg-white h-screen shadow-md flex flex-col justify-between">
+      <div id="sidebarContent" class="p-4">
+        <!-- Initial Sidebar Content -->
+        <div id="initialContent">
+          <div class="p-4">
+            <h3 class="text-xl font-semibold mb-4">How to use MDP viewer</h3>
+            <p class="mb-2 text-gray-700">This tool is designed to help you visualize and analyze multideprivation data across various regions. You can select a country from the list below to view detailed statistics and insights.</p>
+            <p class="mb-2 text-gray-700">Please choose a country from the list below:</p>
+            <label for="countrySelect" class="block mb-2 font-medium text-gray-700">Select a Country:</label>
+            <select id="countrySelect" class="w-full p-2 border border-gray-300 rounded" onchange="updateMap()">
+              <option value="KHM">Cambodia</option>
+              <option value="PRK">Democratic People's Republic of Korea</option>
+              <option value="LAO" selected>Lao People's Democratic Republic</option>
+              <option value="MMR">Myanmar</option>
+              <option value="PNG">Papua New Guinea</option>
+              <option value="SLB">Solomon Islands</option>
+            </select>
+
+            <!-- Indicator Selection -->
+            <h2 class="text-xl font-semibold mt-6 mb-4">Select Sector and Indicator</h2>
+
+            <!-- Sector Dropdown -->
+            <label for="sectorSelect" class="block mb-2 font-medium text-gray-700">Select Sector:</label>
+            <select id="sectorSelect" class="w-full p-2 border border-gray-300 rounded mb-4" onchange="populateIndicators()">
+              <option value="">-- Select Sector --</option>
+              <option value="Health">Health</option>
+              <option value="Nutrition">Nutrition</option>
+              <option value="Education">Education</option>
+              <option value="Child Protection">Child Protection</option>
+              <option value="WASH">Water, Sanitation, and Hygiene (WASH)</option>
+              <option value="Social Policy">Social Policy</option>
+            </select>
+
+            <!-- Indicator Dropdown -->
+            <label for="indicatorSelect" class="block mb-2 font-medium text-gray-700">Select Indicator:</label>
+            <select id="indicatorSelect" class="w-full p-2 border border-gray-300 rounded mb-4" onchange="showIndicatorDescription()">
+              <option value="">-- Select Indicator --</option>
+            </select>
+
+            <!-- Indicator Description -->
+            <div id="indicatorDescription" class="mt-4 p-4 bg-gray-100 border border-gray-300 rounded hidden">
+              <h3 class="text-lg font-semibold mb-2">Indicator Description:</h3>
+              <p id="descriptionText" class="text-gray-700"></p>
+            </div>
+            <button id="navigateButton" class="mt-4 bg-blue-500 text-white p-2 rounded hidden" onclick="navigateToUploadedData()">Step 2: Upload Data</button>
+
+            
+          </div>
+
+          
+        </div>
+        <!-- Uploaded Data Display -->
+        <div id="uploadedDataSection" class="hidden">
+          <!-- File Upload for User Data -->
+           <div id="dataPicker" class="draggable">
+            <h3 class="text-lg font-semibold mb-2">Select your data</h3>
+            <!-- Enhanced Dropdown for Existing Data Files with Search -->
+            <label for="existingDataSelect" class="w-full block mb-2 font-medium text-gray-700">Select Existing Data File:</label>
+            <select id="existingDataSelect" class="w-full p-2 border border-gray-300 rounded mb-4" multiple="multiple" style="width: 95%;">
+              <option value="">-- Search File --</option>
+              <option value="file1.csv">File 1</option>
+              <option value="file2.csv">File 2</option>
+              <!-- Add more options as needed -->
+            </select>
+
+            <!-- List of Most Recent Files -->
+            <h4 class="text-md font-semibold mt-4 mb-2">Recent Files</h4>
+            <ul class="list-disc pl-5 text-sm text-gray-600">
+              <li>File 3.csv - Added on 2023-10-01 by User A</li>
+              <li>File 4.csv - Added on 2023-09-28 by User B</li>
+              <!-- Add more recent files as needed -->
+            </ul>
+          </div>
+          <div class="mt-6">
+            <h3 class="text-lg font-semibold mb-2">Upload Your Data</h3>
+            <div class="flex items-center justify-center w-full">
+              <label for="dropzone-file" class="flex flex-col items-center justify-center w-full h-48 border-2 border-gray-200 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                  <svg class="w-6 h-6 mb-3 text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
+                  </svg>
+                  <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">Click to upload</span> or drag and drop</p>
+                  <p class="text-xs text-gray-500">CSV or Excel (MAX. 5MB)</p>
+                  <p class="text-xs text-gray-500">Your data should have the same format as the base data</p>
+                </div>
+                <input id="dropzone-file" type="file" class="hidden" accept=".csv, .xlsx" />
+              </label>
+            </div>
+          </div>
+          <h3 class="text-lg font-semibold mb-2">Uploaded Data</h3>
+          <p class="text-gray-500 mb-2">Uploaded data looks like below, now we will match the data with our base data</p>
+          <pre id="dataDisplay" class="bg-gray-100 p-4 rounded-lg overflow-hidden"></pre>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+<main class="flex-1 p-6 flex flex-col h-screen">
+  <!-- Map and Chart (70% height) -->
+  <div class="grid grid-cols-2 gap-6 h-[70%]">
+    <!-- Map -->
+    <div class="bg-white p-6 rounded-lg shadow-md h-full">
+      <h3 class="text-xl font-semibold mb-2">Map</h3>
+      <p class="text-gray-500 mb-2">Map of the selected country</p>
+      <svg id="mapSvg" width="100%" height="90%"></svg>
+    </div>
+
+    <!-- Chart -->
+    <div class="bg-white p-6 rounded-lg shadow-md h-full">
+      <h3 class="text-xl font-semibold mb-2">Chart</h3>
+      <p class="text-gray-500 mb-2">Chart of the selected country</p>
+      <svg id="chartSvg" width="100%" height="100%"></svg>
+    </div>
+  </div>
+
+  <!-- Data Table (30% height) -->
+   
+  <div class="bg-white p-6 rounded-lg shadow-md h-[30%] mt-6 overflow-hidden">
+    <h3 class="text-xl font-semibold mb-2">Data Table</h3>
+    <p class="text-gray-500 mb-2">Data table of the selected country</p>
+    <div class="bg-gray-200 rounded-lg overflow-auto h-full">
+      <table id="dataTable" class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Province</th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
+
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <tr>
+            <td class="px-6 py-4 whitespace-nowrap">Data 1</td>
+            <td class="px-6 py-4 whitespace-nowrap">Data 2</td>
+            <td class="px-6 py-4 whitespace-nowrap">Data 3</td>
+          </tr>
+          <!-- More rows as needed -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+
+  <!-- Import Visualization Scripts -->
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+  <script src="{{ url_for('static', filename='visualization.js') }}"></script>
+  <script>
+   
+
+    const indicators = {
+      "Health": {
+        "DTP-1 Coverage": "Percentage of children (12-23 months) who received the first dose of diphtheria, tetanus, and pertussis (DTP) vaccine.",
+        "Antenatal Care (4+ Visits)": "Percentage of women aged 15-49 who attended at least four ANC visits during pregnancy.",
+        "Skilled Birth Attendance": "Proportion of births attended by skilled health personnel."
+      },
+      "Nutrition": {
+        "Exclusive Breastfeeding": "Proportion of infants 0-5 months exclusively fed with breast milk.",
+        "Stunting Prevalence": "Prevalence of stunting among children under 5 years (% height-for-age <-2 SD).",
+        "Vitamin A Supplementation": "Percentage of children aged 6-23 months given Vitamin A supplements in the last 6 months."
+      },
+      "Education": {
+        "Pre-primary Attendance": "Percentage of children participating in early childhood education.",
+        "Primary School Attendance": "Percentage of children of official primary school age attending school.",
+        "Upper Secondary Attendance": "Percentage of students of upper secondary age attending upper secondary school."
+      },
+      "Child Protection": {
+        "Inadequate Supervision": "Percentage of children aged 0-59 months left alone or in the care of another child under 10 for more than 1 hour.",
+        "Birth Registration": "Percentage of children under 5 years whose births are registered."
+      },
+      "WASH": {
+        "Access to Drinking Water": "Proportion of households using at least basic drinking water services.",
+        "Access to Sanitation": "Proportion of households using at least basic sanitation services.",
+        "Handwashing Facilities": "Proportion of households with a handwashing facility with soap and water."
+      },
+      "Social Policy": {
+        "Monetary Poverty": "Proportion of children living in households below the national poverty line.",
+        "Social Protection Coverage": "Proportion of children aged 0-17 covered by social protection programs."
+      }
+    };
+
+    function populateIndicators() {
+      const sectorSelect = document.getElementById("sectorSelect");
+      const indicatorSelect = document.getElementById("indicatorSelect");
+      const selectedSector = sectorSelect.value;
+
+      // Clear existing options
+      indicatorSelect.innerHTML = `<option value="">-- Select Indicator --</option>`;
+
+      if (selectedSector && indicators[selectedSector]) {
+        for (const indicator in indicators[selectedSector]) {
+          const option = document.createElement("option");
+          option.value = indicator;
+          option.textContent = indicator;
+          indicatorSelect.appendChild(option);
+        }
+      }
+
+      document.getElementById("indicatorDescription").classList.add("hidden");
+    }
+
+    function showIndicatorDescription() {
+      const sectorSelect = document.getElementById("sectorSelect");
+      const indicatorSelect = document.getElementById("indicatorSelect");
+      const descriptionText = document.getElementById("descriptionText");
+
+      const selectedSector = sectorSelect.value;
+      const selectedIndicator = indicatorSelect.value;
+
+      if (selectedSector && selectedIndicator) {
+        descriptionText.textContent = indicators[selectedSector][selectedIndicator];
+        document.getElementById("indicatorDescription").classList.remove("hidden");
+
+        // Show button when any indicator is selected
+        const navigateButton = document.getElementById("navigateButton");
+        navigateButton.classList.remove("hidden");
+      } else {
+        document.getElementById("indicatorDescription").classList.add("hidden");
+        document.getElementById("navigateButton").classList.add("hidden");
+      }
+    }
+
+    document.getElementById('dropzone-file').addEventListener('change', function(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const fileContent = e.target.result;
+          // Replace initial content with uploaded data
+          document.getElementById('initialContent').style.display = 'none';
+          document.getElementById('dataDisplay').textContent = fileContent;
+          document.getElementById('uploadedDataSection').classList.remove('hidden');
+        };
+        reader.readAsText(file); // Assuming the file is a text-based format like CSV
+      }
+    });
+
+    function navigateToUploadedData() {
+      document.getElementById('initialContent').style.display = 'none';
+      document.getElementById('uploadedDataSection').classList.remove('hidden');
+    }
+
+    // Initialize Select2 for the dropdown
+    $(document).ready(function() {
+      $('#existingDataSelect').select2({
+        placeholder: "-- Select File --",
+        allowClear: true
+      });
+    });
+
+    document.getElementById('printButton').addEventListener('click', function() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({
+    orientation: 'portrait', // or 'landscape'
+    unit: 'mm', // or 'pt', 'cm', 'in'
+    format: 'a4' // or 'letter', 'legal', etc.
+  });
+
+  // Add title
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text("Multidepravation data summary", 105, 20, { align: 'center' });
+
+  // Add a line below the header
+  doc.setLineWidth(0.5);
+  doc.line(10, 25, 200, 25);
+
+  // Text for the date
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.text("Description: ", 10, 35);
+
+  // Convert SVG to Canvas and add to PDF
+  function addSvgToPdf(svgElement, x, y, width, height) {
+    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+
+    img.onload = function() {
+      // Set canvas dimensions to match the SVG's bounding box
+      const bbox = svgElement.getBBox();
+      canvas.width = bbox.width;
+      canvas.height = bbox.height;
+      ctx.drawImage(img, 0, 0, bbox.width, bbox.height);
+
+      const imgData = canvas.toDataURL('image/png');
+      doc.addImage(imgData, 'PNG', x, y, width, height);
+
+      // Save the PDF after adding images
+      if (svgElement.id === 'chartSvg') {
+        doc.save('document.pdf');
+      }
+    };
+
+    img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+  }
+
+  // Add map
+  const mapSvg = document.getElementById('mapSvg');
+  addSvgToPdf(mapSvg, 15, 50, 180, 100);
+
+  // Add chart
+  const chartSvg = document.getElementById('chartSvg');
+  addSvgToPdf(chartSvg, 15, 150, 100, 100);
+
+  // Add table
+  const table = document.getElementById('dataTable');
+    doc.autoTable({ html: table, startY: 150 });
+});
+  </script>
+</body>
+</html>

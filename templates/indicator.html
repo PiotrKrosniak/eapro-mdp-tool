@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Picker</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+
+  <div class="bg-white shadow-md rounded-lg p-6 w-1/2">
+    <h2 class="text-2xl font-semibold mb-4">Select Sector and Indicator</h2>
+
+    <!-- Sector Dropdown -->
+    <label for="sectorSelect" class="block mb-2 font-medium text-gray-700">Select Sector:</label>
+    <select id="sectorSelect" class="w-full p-2 border border-gray-300 rounded mb-4" onchange="populateIndicators()">
+      <option value="">-- Select Sector --</option>
+      <option value="Health">Health</option>
+      <option value="Nutrition">Nutrition</option>
+      <option value="Education">Education</option>
+      <option value="Child Protection">Child Protection</option>
+      <option value="WASH">Water, Sanitation, and Hygiene (WASH)</option>
+      <option value="Social Policy">Social Policy</option>
+    </select>
+
+    <!-- Indicator Dropdown -->
+    <label for="indicatorSelect" class="block mb-2 font-medium text-gray-700">Select Indicator:</label>
+    <select id="indicatorSelect" class="w-full p-2 border border-gray-300 rounded mb-4" onchange="showIndicatorDescription()">
+      <option value="">-- Select Indicator --</option>
+    </select>
+
+    <!-- Indicator Description -->
+    <div id="indicatorDescription" class="mt-4 p-4 bg-gray-100 border border-gray-300 rounded hidden">
+      <h3 class="text-lg font-semibold mb-2">Indicator Description:</h3>
+      <p id="descriptionText" class="text-gray-700"></p>
+    </div>
+  </div>
+
+  <script>
+    const indicators = {
+      "Health": {
+        "DTP-1 Coverage": "Percentage of children (12-23 months) who received the first dose of diphtheria, tetanus, and pertussis (DTP) vaccine.",
+        "Antenatal Care (4+ Visits)": "Percentage of women aged 15-49 who attended at least four ANC visits during pregnancy.",
+        "Skilled Birth Attendance": "Proportion of births attended by skilled health personnel."
+      },
+      "Nutrition": {
+        "Exclusive Breastfeeding": "Proportion of infants 0-5 months exclusively fed with breast milk.",
+        "Stunting Prevalence": "Prevalence of stunting among children under 5 years (% height-for-age <-2 SD).",
+        "Vitamin A Supplementation": "Percentage of children aged 6-23 months given Vitamin A supplements in the last 6 months."
+      },
+      "Education": {
+        "Pre-primary Attendance": "Percentage of children participating in early childhood education.",
+        "Primary School Attendance": "Percentage of children of official primary school age attending school.",
+        "Upper Secondary Attendance": "Percentage of students of upper secondary age attending upper secondary school."
+      },
+      "Child Protection": {
+        "Inadequate Supervision": "Percentage of children aged 0-59 months left alone or in the care of another child under 10 for more than 1 hour.",
+        "Birth Registration": "Percentage of children under 5 years whose births are registered."
+      },
+      "WASH": {
+        "Access to Drinking Water": "Proportion of households using at least basic drinking water services.",
+        "Access to Sanitation": "Proportion of households using at least basic sanitation services.",
+        "Handwashing Facilities": "Proportion of households with a handwashing facility with soap and water."
+      },
+      "Social Policy": {
+        "Monetary Poverty": "Proportion of children living in households below the national poverty line.",
+        "Social Protection Coverage": "Proportion of children aged 0-17 covered by social protection programs."
+      }
+    };
+
+    function populateIndicators() {
+      const sectorSelect = document.getElementById("sectorSelect");
+      const indicatorSelect = document.getElementById("indicatorSelect");
+      const selectedSector = sectorSelect.value;
+
+      // Clear existing options
+      indicatorSelect.innerHTML = `<option value="">-- Select Indicator --</option>`;
+
+      if (selectedSector && indicators[selectedSector]) {
+        for (const indicator in indicators[selectedSector]) {
+          const option = document.createElement("option");
+          option.value = indicator;
+          option.textContent = indicator;
+          indicatorSelect.appendChild(option);
+        }
+      }
+
+      document.getElementById("indicatorDescription").classList.add("hidden");
+    }
+
+    function showIndicatorDescription() {
+      const sectorSelect = document.getElementById("sectorSelect");
+      const indicatorSelect = document.getElementById("indicatorSelect");
+      const descriptionText = document.getElementById("descriptionText");
+
+      const selectedSector = sectorSelect.value;
+      const selectedIndicator = indicatorSelect.value;
+
+      if (selectedSector && selectedIndicator) {
+        descriptionText.textContent = indicators[selectedSector][selectedIndicator];
+        document.getElementById("indicatorDescription").classList.remove("hidden");
+      } else {
+        document.getElementById("indicatorDescription").classList.add("hidden");
+      }
+    }
+  </script>
+</body>
+</html>
