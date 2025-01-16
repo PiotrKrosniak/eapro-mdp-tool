@@ -22,7 +22,7 @@ jobs:
         username: ubuntu
         key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
         script: |
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
           cd /home/ubuntu/multidepravation-data-viewer
           git pull origin main
-          # Add deployment commands here
           python3 app.py
